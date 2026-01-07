@@ -1,5 +1,9 @@
 # CredoExceptionSwallow
 
+[![Hex.pm](https://img.shields.io/hexpm/v/credo_exception_swallow.svg)](https://hex.pm/packages/credo_exception_swallow)
+[![Hex.pm](https://img.shields.io/hexpm/l/credo_exception_swallow.svg)](https://github.com/dgilperez/credo_exception_swallow/blob/master/LICENSE)
+[![Hex.pm](https://img.shields.io/hexpm/dt/credo_exception_swallow.svg)](https://hex.pm/packages/credo_exception_swallow)
+
 A [Credo](https://github.com/rrrene/credo) check to detect silent exception swallowing in Elixir rescue blocks.
 
 Silent exception handling is a dangerous anti-pattern that:
