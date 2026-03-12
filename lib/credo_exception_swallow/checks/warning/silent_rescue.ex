@@ -9,7 +9,7 @@ defmodule CredoExceptionSwallow.Checks.Warning.SilentRescue do
 
   ## Bad Examples
 
-      # Silent swallow - VERY BAD
+      # Silent swallow in try/rescue - VERY BAD
       try do
         risky_operation()
       rescue
@@ -21,6 +21,13 @@ defmodule CredoExceptionSwallow.Checks.Warning.SilentRescue do
         parse_data(input)
       rescue
         ArgumentError -> {:error, :invalid}
+      end
+
+      # Silent swallow in function-level rescue - ALSO BAD
+      defp load_data(id) do
+        Repo.all(from(d in Data, where: d.id == ^id))
+      rescue
+        _ -> []
       end
 
   ## Good Examples
@@ -150,6 +157,21 @@ defmodule CredoExceptionSwallow.Checks.Warning.SilentRescue do
     {ast, issues ++ new_issues}
   end
 
+  # Match function-level rescue clauses (def/defp ... rescue ... end)
+  # AST structure: {:def|:defp, meta, [head, [do: body, rescue: [clauses]]]}
+  defp traverse({def_type, _meta, [_head, keywords]} = ast, issues, issue_meta, acceptable_calls)
+       when def_type in [:def, :defp] and is_list(keywords) do
+    rescue_clauses = Keyword.get(keywords, :rescue, [])
+
+    new_issues =
+      rescue_clauses
+      |> Enum.flat_map(fn clause ->
+        check_rescue_clause(clause, issue_meta, acceptable_calls)
+      end)
+
+    {ast, issues ++ new_issues}
+  end
+
   defp traverse(ast, issues, _issue_meta, _acceptable_calls) do
     {ast, issues}
   end
@@ -175,41 +197,43 @@ defmodule CredoExceptionSwallow.Checks.Warning.SilentRescue do
   defp check_rescue_clause(_clause, _issue_meta, _acceptable_calls), do: []
 
   defp has_acceptable_call?(body, acceptable_calls) do
-    Macro.prewalk(body, false, fn
-      # Check for function calls like Module.function()
-      {{:., _, [{:__aliases__, _, module_parts}, func_name]}, _, _args}, _acc ->
-        full_name = Enum.join(module_parts, ".") <> ".#{func_name}"
+    {_ast, found} =
+      Macro.prewalk(body, false, fn
+        # Check for function calls like Module.function()
+        {{:., _, [{:__aliases__, _, module_parts}, func_name]}, _, _args} = ast, acc ->
+          full_name = Enum.join(module_parts, ".") <> ".#{func_name}"
 
-        if full_name in acceptable_calls do
-          {nil, true}
-        else
-          {nil, false}
-        end
+          if full_name in acceptable_calls do
+            {ast, true}
+          else
+            {ast, acc}
+          end
 
-      # Check for reraise
-      {:reraise, _, _}, _acc ->
-        {nil, true}
+        # Check for reraise
+        {:reraise, _, _} = ast, _acc ->
+          {ast, true}
 
-      # Check for raise (re-raising)
-      {:raise, _, _}, _acc ->
-        {nil, true}
+        # Check for raise (re-raising)
+        {:raise, _, _} = ast, _acc ->
+          {ast, true}
 
-      # Check for Logger calls (atoms)
-      {{:., _, [{:__aliases__, _, [:Logger]}, func]}, _, _}, _acc
-      when func in [:error, :warning, :warn, :info, :debug] ->
-        {nil, true}
+        # Check for Logger calls (atoms)
+        {{:., _, [{:__aliases__, _, [:Logger]}, func]}, _, _} = ast, _acc
+        when func in [:error, :warning, :warn, :info, :debug] ->
+          {ast, true}
 
-      # Check for ErrorReporter calls
-      {{:., _, [{:__aliases__, _, [:ErrorReporter]}, _func]}, _, _}, _acc ->
-        {nil, true}
+        # Check for ErrorReporter calls
+        {{:., _, [{:__aliases__, _, [:ErrorReporter]}, _func]}, _, _} = ast, _acc ->
+          {ast, true}
 
-      # Check for Sentry calls
-      {{:., _, [{:__aliases__, _, [:Sentry]}, _func]}, _, _}, _acc ->
-        {nil, true}
+        # Check for Sentry calls
+        {{:., _, [{:__aliases__, _, [:Sentry]}, _func]}, _, _} = ast, _acc ->
+          {ast, true}
 
-      ast, acc ->
-        {ast, acc}
-    end)
-    |> elem(1)
+        ast, acc ->
+          {ast, acc}
+      end)
+
+    found
   end
 end
