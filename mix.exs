@@ -1,7 +1,7 @@
 defmodule CredoExceptionSwallow.MixProject do
   use Mix.Project
 
-  @version "0.2.0"
+  @version "0.2.1"
   @source_url "https://github.com/dgilperez/credo_exception_swallow"
 
   def project do
@@ -43,8 +43,10 @@ defmodule CredoExceptionSwallow.MixProject do
     [
       name: "credo_exception_swallow",
       licenses: ["MIT"],
+      files: ["lib", "mix.exs", "README.md", "CHANGELOG.md", "LICENSE"],
       links: %{
-        "GitHub" => @source_url
+        "GitHub" => @source_url,
+        "Changelog" => "#{@source_url}/blob/master/CHANGELOG.md"
       },
       maintainers: ["David Gil"]
     ]

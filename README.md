@@ -20,10 +20,19 @@ Add to your `mix.exs`:
 ```elixir
 def deps do
   [
-    {:credo_exception_swallow, "~> 0.1.0", only: [:dev, :test], runtime: false}
+    {:credo_exception_swallow, "~> 0.2.1", only: [:dev, :test], runtime: false}
   ]
 end
 ```
+
+This package extends Credo with one focused check:
+
+- `CredoExceptionSwallow.Checks.Warning.SilentRescue`
+
+It covers both:
+
+- `try/rescue` blocks
+- function-level rescue in `def`/`defp`
 
 ## Configuration
 
@@ -46,6 +55,20 @@ Add to your `.credo.exs` in the `checks: %{enabled: [...]}` section:
   # Additional acceptable function calls beyond defaults
   acceptable_calls: [
     "MyApp.ErrorHandler.report"
+  ]
+]}
+```
+
+### Custom Error Reporters
+
+If your application uses a project-specific reporter facade instead of the default
+`ErrorReporter.report_exception/2` naming, add it explicitly:
+
+```elixir
+{CredoExceptionSwallow.Checks.Warning.SilentRescue, [
+  acceptable_calls: [
+    "PhaosCore.ErrorReporter.capture_exception",
+    "PhaosCore.ErrorReporter.capture_error"
   ]
 ]}
 ```
@@ -99,6 +122,17 @@ rescue
 end
 ```
 
+```elixir
+# Function-level rescue with reporting
+defp load_data(id) do
+  Repo.get!(Data, id)
+rescue
+  error ->
+    ErrorReporter.report_exception(error, %{context: "load_data"})
+    []
+end
+```
+
 ## Default Acceptable Calls
 
 The following function calls are considered proper error handling:
@@ -114,6 +148,8 @@ The following function calls are considered proper error handling:
 - `Sentry.capture_message/1,2`
 - `reraise/2`
 - `raise/1,2`
+
+Project-specific reporters can be added through `acceptable_calls`.
 
 ## License
 

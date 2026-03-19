@@ -153,6 +153,29 @@ defmodule CredoExceptionSwallowTest do
       issues = run_check(code)
       assert issues == []
     end
+
+    test "allows rescue with custom acceptable call configuration" do
+      code = """
+      defmodule GoodExample do
+        def risky do
+          try do
+            something()
+          rescue
+            e ->
+              PhaosCore.ErrorReporter.capture_exception(e, stacktrace: __STACKTRACE__)
+              :error
+          end
+        end
+      end
+      """
+
+      issues =
+        run_check(code, "test.ex",
+          acceptable_calls: ["PhaosCore.ErrorReporter.capture_exception"]
+        )
+
+      assert issues == []
+    end
   end
 
   describe "function-level rescue blocks" do
