@@ -67,8 +67,8 @@ If your application uses a project-specific reporter facade instead of the defau
 ```elixir
 {CredoExceptionSwallow.Checks.Warning.SilentRescue, [
   acceptable_calls: [
-    "PhaosCore.ErrorReporter.capture_exception",
-    "PhaosCore.ErrorReporter.capture_error"
+    "MyApp.ErrorReporter.capture_exception",
+    "MyApp.ErrorReporter.capture_error"
   ]
 ]}
 ```

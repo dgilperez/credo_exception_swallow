@@ -162,7 +162,7 @@ defmodule CredoExceptionSwallowTest do
             something()
           rescue
             e ->
-              PhaosCore.ErrorReporter.capture_exception(e, stacktrace: __STACKTRACE__)
+              MyApp.ErrorReporter.capture_exception(e, stacktrace: __STACKTRACE__)
               :error
           end
         end
@@ -171,7 +171,7 @@ defmodule CredoExceptionSwallowTest do
 
       issues =
         run_check(code, "test.ex",
-          acceptable_calls: ["PhaosCore.ErrorReporter.capture_exception"]
+          acceptable_calls: ["MyApp.ErrorReporter.capture_exception"]
         )
 
       assert issues == []
