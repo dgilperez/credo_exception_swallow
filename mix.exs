@@ -1,7 +1,7 @@
 defmodule CredoExceptionSwallow.MixProject do
   use Mix.Project
 
-  @version "0.2.1"
+  @version "0.3.0"
   @source_url "https://github.com/dgilperez/credo_exception_swallow"
 
   def project do
@@ -34,8 +34,9 @@ defmodule CredoExceptionSwallow.MixProject do
 
   defp description do
     """
-    Credo check to detect silent exception swallowing in rescue blocks.
-    Enforces proper error handling by requiring logging, error reporting, or re-raising.
+    Credo checks for failures that go nowhere: exceptions swallowed in rescue
+    blocks, and error branches that log a warning and then return a
+    success-shaped value.
     """
   end
 

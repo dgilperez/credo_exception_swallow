@@ -170,9 +170,7 @@ defmodule CredoExceptionSwallowTest do
       """
 
       issues =
-        run_check(code, "test.ex",
-          acceptable_calls: ["MyApp.ErrorReporter.capture_exception"]
-        )
+        run_check(code, "test.ex", acceptable_calls: ["MyApp.ErrorReporter.capture_exception"])
 
       assert issues == []
     end

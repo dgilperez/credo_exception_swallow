@@ -20,29 +20,62 @@ Add to your `mix.exs`:
 ```elixir
 def deps do
   [
-    {:credo_exception_swallow, "~> 0.2.1", only: [:dev, :test], runtime: false}
+    {:credo_exception_swallow, "~> 0.3.0", only: [:dev, :test], runtime: false}
   ]
 end
 ```
 
-This package extends Credo with one focused check:
+This package extends Credo with two focused checks:
 
-- `CredoExceptionSwallow.Checks.Warning.SilentRescue`
-
-It covers both:
-
-- `try/rescue` blocks
-- function-level rescue in `def`/`defp`
+- `CredoExceptionSwallow.Checks.Warning.SilentRescue` — exceptions that get
+  caught and thrown away. Covers `try/rescue` blocks and function-level rescue
+  in `def`/`defp`.
+- `CredoExceptionSwallow.Checks.Warning.LoggedAndDroppedError` — failures that
+  never raise anything at all: an `{:error, _}` branch that logs a warning and
+  then returns a success-shaped value, so the batch reports `{:ok, stats}` while
+  the row is gone. Covers `case`, `with/else`, `fn` and `receive` clauses plus
+  function heads that pattern-match the failure.
 
 ## Configuration
 
 Add to your `.credo.exs` in the `checks: %{enabled: [...]}` section:
 
 ```elixir
-{CredoExceptionSwallow.Checks.Warning.SilentRescue, []}
+{CredoExceptionSwallow.Checks.Warning.SilentRescue, []},
+{CredoExceptionSwallow.Checks.Warning.LoggedAndDroppedError, []}
 ```
 
 ### Options
+
+#### `LoggedAndDroppedError`
+
+```elixir
+{CredoExceptionSwallow.Checks.Warning.LoggedAndDroppedError, [
+  # Where a dropped row hurts most. Applies everywhere if omitted.
+  files: %{included: ["lib/**/sync/**", "lib/**/workers/**"]},
+  # Log calls that mark a branch as "the author said this mattered"
+  log_calls: ["Logger.warning", "Logger.error"],
+  # Calls that count as reporting. Bare local names work too, so a project
+  # whose reporting goes through a private helper can name it.
+  reporting_calls: ["ErrorReporter.report_message", "report_degraded_board_type"],
+  # The project's own doors out: an HTTP error response, say. Empty by default.
+  propagating_calls: ["send_error"],
+  # Skip test files (default: true)
+  skip_test_files: true
+]}
+```
+
+Not flagged: branches that report, raise, retry (including
+`Process.send_after(self(), ...)`), or propagate — an error tuple, the error
+under another name, or any value that still mentions what the error pattern
+bound.
+
+Known blind spot: accumulating the failure so the *caller* reports it once per
+batch is the right pattern and cannot be seen one branch at a time. Mark those
+with `# credo:disable-for-next-line`, which turns the false positive into a
+reviewed statement of intent.
+
+#### `SilentRescue`
 
 ```elixir
 {CredoExceptionSwallow.Checks.Warning.SilentRescue, [
